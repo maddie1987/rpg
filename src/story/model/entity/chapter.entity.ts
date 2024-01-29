@@ -5,7 +5,7 @@ import {
   PrimaryKey,
   Property,
 } from '@mikro-orm/core';
-import { Post } from '../../../posts/model/post.entity';
+import { Post } from './post.entity';
 
 @Entity({ tableName: 'chapter' })
 export class Chapter {

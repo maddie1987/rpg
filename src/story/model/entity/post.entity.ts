@@ -1,12 +1,7 @@
-import {
-  BeforeCreate,
-  BeforeUpdate,
-  ManyToOne,
-  PrimaryKey,
-  Property,
-} from '@mikro-orm/core';
+import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core';
 import { Chapter } from './chapter.entity';
 
+@Entity({ tableName: 'post' })
 export class Post {
   @PrimaryKey({
     name: 'id',
@@ -41,6 +36,8 @@ export class Post {
   @Property({
     name: 'timestamp',
     columnType: 'timestamp',
+    onUpdate: () => new Date(),
+    onCreate: () => new Date(),
     nullable: false,
   })
   lastUpdate: Date;
@@ -48,24 +45,14 @@ export class Post {
   @Property({
     name: 'year',
     columnType: 'year',
-    nullable: false,
+    nullable: true,
   })
   year!: number;
 
   @Property({
     name: 'role_name',
     columnType: 'varchar(255)',
-    nullable: true,
+    nullable: false,
   })
   roleName!: string;
-
-  @BeforeUpdate()
-  async updateTimestamp(): Promise<void> {
-    this.lastUpdate = new Date();
-  }
-
-  @BeforeCreate()
-  async createTimestamp(): Promise<void> {
-    this.lastUpdate = new Date();
-  }
 }

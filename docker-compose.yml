@@ -1,0 +1,17 @@
+version: '3'
+services:
+  rpg-db:
+    image: mariadb
+    container_name: rpg_mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpwd
+      MYSQL_DATABASE: rpg
+      MYSQL_USER: rpg_user
+      MYSQL_PASSWORD: rpg_pwd
+    volumes:
+      - data:/var/lib/mysql
+    ports:
+      - "3308:3306"
+volumes:
+  data:

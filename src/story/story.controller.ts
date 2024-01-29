@@ -2,39 +2,45 @@ import {
   ApiBadRequestResponse,
   ApiBody,
   ApiConsumes,
-  ApiCreatedResponse, ApiNoContentResponse,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiProduces,
-  ApiTags
-} from "@nestjs/swagger";
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   Body,
-  Controller, Delete,
-  Get, HttpCode, HttpStatus,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   Patch,
   Post,
-  UsePipes
-} from "@nestjs/common";
+  UsePipes,
+} from '@nestjs/common';
 import {
-  Chapter,
+  ChapterOutput,
   ChapterInput,
-  ChapterDto,
-} from './model/schema/chapter.schema';
+  PostInput,
+  PostOutput,
+} from './model/schema/story.schema';
 import { ZodValidationPipe } from '@anatine/zod-nestjs';
-import { ChapterFacade } from './chapter.facade';
-import { NoUpdateableEntityException } from '../shared/exceptions/data-handling.exceptions';
+import { StoryFacade } from './story.facade';
+import { NoUpdatableEntityException } from '../shared/exceptions/data-handling.exceptions';
 
-@ApiTags('Chapter CRUD')
+@ApiTags('Story CRUD')
 @ApiProduces('application/json')
 @ApiConsumes('application/json')
 @UsePipes(ZodValidationPipe)
 @Controller()
-export class ChapterController {
-  constructor(private readonly chapterFacade: ChapterFacade) {}
+export class StoryController {
+  constructor(private readonly storyFacade: StoryFacade) {}
 
   @Post('chapter')
   @ApiOperation({
@@ -52,7 +58,7 @@ export class ChapterController {
     description: 'The given metadata is not valid.',
   })
   async createChapter(@Body() chapterInput: ChapterInput) {
-    await this.chapterFacade.createChapter(chapterInput);
+    await this.storyFacade.createChapter(chapterInput);
   }
 
   @Patch('chapter/:id')
@@ -79,9 +85,9 @@ export class ChapterController {
     @Body() chapterInput: ChapterInput,
   ) {
     try {
-      await this.chapterFacade.updateChapter(id, chapterInput);
+      await this.storyFacade.updateChapter(id, chapterInput);
     } catch (error) {
-      if (error instanceof NoUpdateableEntityException) {
+      if (error instanceof NoUpdatableEntityException) {
         throw new NotFoundException(`There is no chapter with Id ${error.id}`);
       } else {
         throw error;
@@ -95,14 +101,23 @@ export class ChapterController {
     summary: 'Delete a chapter',
     description: 'Delete a chapter by id along with all of its posts.',
   })
+  @ApiParam({
+    name: 'id',
+    type: 'number',
+    required: true,
+    description: 'The id of the chapter to be deleted.',
+  })
   @ApiNoContentResponse({
     description: 'Deletion was successful.',
   })
+  @ApiNotFoundResponse({
+    description: 'The given Chapter does not exist.',
+  })
   async deleteChapter(@Param('id') id: number): Promise<void> {
     try {
-      await this.chapterFacade.deleteChapter(id);
+      await this.storyFacade.deleteChapter(id);
     } catch (error) {
-      if (error instanceof NoUpdateableEntityException) {
+      if (error instanceof NoUpdatableEntityException) {
         throw new NotFoundException(`There is no chapter with Id ${error.id}`);
       } else {
         throw error;
@@ -116,10 +131,114 @@ export class ChapterController {
     description: 'Retrieve all chapters in chronological order.',
   })
   @ApiOkResponse({
-    type: [Chapter],
+    type: [ChapterOutput],
     description: 'All available chapters in chronological order',
   })
-  async getChapters(): Promise<ChapterDto[]> {
-    return this.chapterFacade.retrieveChapters();
+  async getChapters(): Promise<ChapterOutput[]> {
+    return this.storyFacade.retrieveChapters();
+  }
+
+  @Post('chapter/:chapterId/post')
+  @ApiOperation({
+    summary: 'Post creation',
+    description: 'Create a new part of the story.',
+  })
+  @ApiParam({
+    name: 'chapterId',
+    type: 'number',
+    required: true,
+    description: 'The id of the chapter to which the post belongs.',
+  })
+  @ApiBody({
+    type: PostInput,
+    description: 'Text and Metadata for the new part to be created.',
+  })
+  @ApiCreatedResponse({
+    description: 'The new post has been created.',
+  })
+  @ApiBadRequestResponse({
+    description: 'The given data is not valid.',
+  })
+  async createPost(
+    @Param('chapterId') chapterId: number,
+    @Body() postInput: PostInput,
+  ) {
+    try {
+      await this.storyFacade.createPost(chapterId, postInput);
+    } catch (error) {
+      if (error instanceof NoUpdatableEntityException) {
+        throw new NotFoundException(`There is no chapter with Id ${error.id}`);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  @Get('chapter/:chapterId/posts')
+  @ApiOperation({
+    summary: 'Retrieve posts from a chapter',
+    description: 'Retrieve all posts in positional order.',
+  })
+  @ApiParam({
+    name: 'chapterId',
+    type: 'number',
+    required: true,
+    description: 'The id of the chapter to which the post belongs.',
+  })
+  @ApiOkResponse({
+    type: [PostOutput],
+    description: 'All posts for a chapter in positional order',
+  })
+  async getPosts(@Param('chapterId') chapterId: number): Promise<PostOutput[]> {
+    try {
+      return this.storyFacade.retrievePostsForChapter(chapterId);
+    } catch (error) {
+      if (error instanceof NoUpdatableEntityException) {
+        throw new NotFoundException(`There is no chapter with Id ${error.id}`);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  @Delete('chapter/:chapterId/post/:postId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete a chapter',
+    description: 'Delete a chapter by id along with all of its posts.',
+  })
+  @ApiParam({
+    name: 'chapterId',
+    type: 'number',
+    required: true,
+    description: 'The id of the chapter to which the post belongs.',
+  })
+  @ApiParam({
+    name: 'postId',
+    type: 'number',
+    required: true,
+    description: 'The id of the post to be deleted.',
+  })
+  @ApiNoContentResponse({
+    description: 'Deletion was successful.',
+  })
+  @ApiNotFoundResponse({
+    description: 'The given post does not exist in the given chapter.',
+  })
+  async deletePost(
+    @Param('chapterId') chapterId: number,
+    @Param('postId') postId: number,
+  ): Promise<void> {
+    try {
+      await this.storyFacade.deletePost(chapterId, postId);
+    } catch (error) {
+      if (error instanceof NoUpdatableEntityException) {
+        throw new NotFoundException(
+          `There is no post with Id ${error.id} in chapter with Id ${chapterId}`,
+        );
+      } else {
+        throw error;
+      }
+    }
   }
 }
